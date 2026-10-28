@@ -15,9 +15,28 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.5
-      - run: gradle assembleDebug
+      - name: Build the clean, shareable APK (no keys)
+        run: |
+          gradle assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../FireHome-shareable.apk
+        working-directory: FireHome
+      - name: Add your keys from repository secrets
+        env:
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+        run: |
+          printf '{"tmdbKey":"%s","traktClientId":"%s","traktClientSecret":"%s"}' \
+            "$TMDB_KEY" "$TRAKT_CLIENT_ID" "$TRAKT_CLIENT_SECRET" \
+            > FireHome/app/src/main/assets/secrets.json
+      - name: Build your private APK (with keys)
+        run: gradle assembleDebug
         working-directory: FireHome
       - uses: actions/upload-artifact@v4
         with:
-          name: FireHome-apk
+          name: FireHome-PRIVATE-apk
           path: FireHome/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FireHome-shareable-apk
+          path: FireHome-shareable.apk
